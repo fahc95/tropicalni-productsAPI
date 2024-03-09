@@ -14,7 +14,7 @@ export async function saveDataToFirestore(collectionName: string, data: Product[
 	const collectionRef = db.collection(collectionName);
 	try {
 		const productsData = Buffer.from(JSON.stringify(data)).toString('base64');
-		await collectionRef.add({ productsData });
+		await collectionRef.add({ productsData, createdAt: new Date() });
 		console.log('Filtered data imported successfully to Firestore.');
 		console.timeEnd('saveDataToFirestore took');
 	} catch (error) {
