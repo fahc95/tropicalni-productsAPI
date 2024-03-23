@@ -5,10 +5,8 @@ import { Product } from './interfaces/Product';
 
 async function main(): Promise<void> {
 	try {
+		console.time('Job Took');
 		const azureBlobPathList: Array<string> = await getAzureBlobURLs();
-		console.log(`${azureBlobPathList.length} Azure Blobs`);
-		console.log('-----------------------------------------');
-
 		const data: Product[] = await fetchDataFromSQL(azureBlobPathList);
 
 		if (!data) {
@@ -22,7 +20,8 @@ async function main(): Promise<void> {
 		console.log(`${data.filter((item) => item.imageURL == null).length} products without images`);
 		console.log('-----------------------------------------');
 
-		await saveDataToFirestore('products', products);
+		await saveDataToFirestore('products', data);
+		console.timeLog('Job Took');
 	} catch (error) {
 		console.error('Error importing data to Firestore:', error);
 	}

@@ -4,10 +4,9 @@ import { findStringWithKey } from '../../helpers/utils.helpers';
 import { Product } from '../../interfaces/Product';
 
 export async function fetchDataFromSQL(imagesURLs: Array<string>): Promise<Product[]> {
-	console.time('fetchDataFromSQL took');
 	try {
 		await sql.connect(config);
-		const result = await sql.query`EXEC GetProductosData`;
+		const result = await sql.query`EXEC GetProductsDataWebApp`;
 		const mappedData: Product[] = result.recordset.map((item: Product) => {
 			if (!item.imageURL) {
 				const URL = findStringWithKey(imagesURLs, item.codigoProducto);
@@ -16,7 +15,6 @@ export async function fetchDataFromSQL(imagesURLs: Array<string>): Promise<Produ
 			}
 			return item;
 		});
-		console.timeEnd('fetchDataFromSQL took');
 		return mappedData;
 	} catch (err) {
 		console.error('SQL error', err);

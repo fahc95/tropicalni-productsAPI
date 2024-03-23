@@ -9,8 +9,6 @@ const containerClient = blobServiceClient.getContainerClient(azureServiceConfig.
 
 export async function getAzureBlobURLs(): Promise<Array<string>> {
 	try {
-		console.time('getAzureBlobURLs Took');
-
 		// Get a list of all the blobs in the container
 		const blobList = containerClient.listBlobsFlat();
 
@@ -21,7 +19,6 @@ export async function getAzureBlobURLs(): Promise<Array<string>> {
 			blobUrls.push(blobUrl);
 		}
 
-		console.timeEnd('getAzureBlobURLs Took');
 		return blobUrls;
 	} catch (error) {
 		console.error('Error fetching blob URLs:', error);
