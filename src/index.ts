@@ -6,7 +6,7 @@ import { Product } from './interfaces/Product';
 async function main(): Promise<void> {
 	try {
 		console.time('Job Took');
-		const azureBlobPathList: Array<string> = await getAzureBlobURLs();
+		const azureBlobPathList = await getAzureBlobURLs();
 		const data: Product[] = await fetchDataFromSQL(azureBlobPathList);
 
 		if (!data) {
