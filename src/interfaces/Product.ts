@@ -10,7 +10,11 @@ export interface Product {
 	nombreProducto: string;
 	precioUSD1: number;
 	precioUSD2: number;
+	precioUSD3: number;
+	precioUSD4: number;
 	precioLocal1: number;
 	precioLocal2: number;
+	precioLocal3: number;
+	precioLocal4: number;
 	imageURL: string | null;
 }
