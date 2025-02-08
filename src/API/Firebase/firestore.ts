@@ -30,4 +30,4 @@ async function createDocument<T extends { [x: string]: any }>(docId: string, col
 	}
 }
 
-export { updateDocument };
+export { updateDocument, createDocument };
