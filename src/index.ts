@@ -1,34 +1,61 @@
-import { getAzureBlobURLs } from './API/Azure/azureBlobService.API';
-import { saveDataToFirestore } from './API/Firebase/firestore.API';
-import { fetchDataFromSQL } from './API/SQL/SQL.API';
-import { findDuplicatesByCode } from './helpers/utils.helpers';
-import { Product } from './interfaces/Product';
+import { create } from 'domain';
+import { updateDocument } from './API/Firebase/firestore';
+import { executeStoredProcedure } from './API/SQL/SQL.API';
+import { mapProductChangesToProduct, Product, ProductChangesResult } from './interfaces/Product';
+import cron from 'node-cron';
 
-async function main(): Promise<void> {
+async function ProductUpdateProcessSequence(): Promise<void> {
 	try {
-		console.time('Job Took');
-		const azureBlobPathList = await getAzureBlobURLs();
-		const data: Product[] = await fetchDataFromSQL(azureBlobPathList);
+		await executeStoredProcedure<void>('TakeProductSnapshot');
+		const changes = await executeStoredProcedure<ProductChangesResult[]>('CompareFirstAndLastProductSnapshots');
 
-		if (!data) {
-			console.error('No data fetched from SQL');
+		if (changes.length < 1) {
+			console.log('No changes found');
+			await executeStoredProcedure<void>('UpdateSnapShotTable');
 			return;
 		}
 
-		const products: Product[] = data.filter((item) => item.imageURL != null);
-		//const duplicates = findDuplicatesByCode(products, "codigoProducto");
-		//console.log('duplicates: ', duplicates);
-		console.log(`${data.length} total products`);
-		console.log(`${products.length} products with images`);
-		console.log(`${data.filter((item) => item.imageURL == null).length} products without images`);
-		console.log(`${data.length} total products`);
-		console.log('-----------------------------------------');
+		const productsToUpdate = changes.map((change) => mapProductChangesToProduct(change));
 
-		await saveDataToFirestore('products', data);
-		console.timeLog('Job Took');
+		const updatePromises = productsToUpdate.map((product) => {
+			return updateDocument<Partial<Product>>(product.codigoProducto!, 'products2', product);
+		});
+
+		const results = await Promise.allSettled(updatePromises);
+
+		results.forEach((result, index) => {
+			const productId = productsToUpdate[index].codigoProducto;
+			if (result.status === 'fulfilled') {
+				console.log(`Successfully updated product: ${productId}`);
+			} else {
+				console.error(`Failed to update product: ${productId}`, result.reason);
+			}
+		});
 	} catch (error) {
-		console.error('Error importing data to Firestore:', error);
+		console.error('Error:', error);
 	}
 }
 
-main();
+async function importAllProducts(): Promise<void> {
+	try {
+		const allProducts = await executeStoredProcedure<Product[]>('GetProductsDataWebApp');
+		const updatePromises = allProducts.map((product) => {
+			return createDocument<Product>(product.codigoProducto!, 'products2', product);
+		});
+
+		const results = await Promise.allSettled(updatePromises);
+
+		if (results.find((result) => result.status === 'rejected')) {
+			console.error('Some products failed to import');
+		} else {
+			console.log('All products imported successfully');
+		}
+	} catch (error) {
+		console.error('Error:', error);
+	}
+}
+
+function createDocument<T>(arg0: string, arg1: string, product: Product): any {
+	throw new Error('Function not implemented.');
+}
+// ProductUpdateProcessSequence();
