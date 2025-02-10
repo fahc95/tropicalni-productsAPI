@@ -22,3 +22,9 @@ export const extractProductCodeFromUrl = (url: string): string | null => {
 	const segments = url.split('/');
 	return segments.length > 0 ? segments[segments.length - 1] : null;
 };
+
+export function logPromisesResults<T>(results: PromiseSettledResult<T>[]): void {
+	console.log(`${results.filter((result) => result.status === 'fulfilled').length} operations fulfilled successfully`);
+	console.log(`${results.filter((result) => result.status === 'rejected').length} operations failed`);
+	console.log('Total Results:', results.length);
+}

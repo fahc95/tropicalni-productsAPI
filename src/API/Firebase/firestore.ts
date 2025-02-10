@@ -30,4 +30,14 @@ async function createDocument<T extends { [x: string]: any }>(docId: string, col
 	}
 }
 
+async function createCollection(collectionName: string): Promise<void> {
+	try {
+		const result = await db.collection(collectionName).add({});
+		console.log('Collection created');
+	} catch (error) {
+		console.error('Error creating collection:', error);
+		throw error;
+	}
+}
+
 export { updateDocument, createDocument };

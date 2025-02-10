@@ -1,6 +1,10 @@
-import { updateDocument, createDocument } from './API/Firebase/firestore';
-import { executeStoredProcedure } from './API/SQL/SQL.API';
+import { createDocument, updateDocument } from './API/Firebase/firestore';
+import { executeStoredProcedure, StoredProcedureParameter } from './API/SQL/SQL.API';
+import { logPromisesResults } from './helpers/utils.helpers';
 import { mapProductChangesToProduct, Product, ProductChangesResult } from './interfaces/Product';
+import { SalesByMonthResult, SalesDocument } from './interfaces/Sale';
+import { startScheduler } from './scheduler';
+import * as sql from 'mssql';
 
 async function ProductUpdateProcessSequence(): Promise<void> {
 	try {
@@ -15,9 +19,9 @@ async function ProductUpdateProcessSequence(): Promise<void> {
 
 		const productsToUpdate = changes.map((change) => mapProductChangesToProduct(change));
 
-		const updatePromises = productsToUpdate.map((product) => {
-			return updateDocument<Partial<Product>>(product.codigoProducto!, 'products2', product);
-		});
+		const updatePromises = productsToUpdate.map((product) =>
+			updateDocument<Partial<Product>>(product.codigoProducto!, 'products2', product)
+		);
 
 		const results = await Promise.allSettled(updatePromises);
 
@@ -42,15 +46,32 @@ async function importAllProducts(): Promise<void> {
 		});
 
 		const results = await Promise.allSettled(updatePromises);
-
-		console.log(`${results.filter((result) => result.status === 'fulfilled').length} products imported successfully`);
-		console.log(`${results.filter((result) => result.status === 'rejected').length} products failed to import`);
-		console.log('Total Results:', results.length);
 	} catch (error) {
 		console.error('Error:', error);
 	}
 }
 
-ProductUpdateProcessSequence();
-//importAllProducts();
+async function salesUpdateProcess(year: number): Promise<void> {
+	try {
+		const params: StoredProcedureParameter[] = [{ name: 'Year', type: sql.Int, value: year }];
 
+		const sales = (await executeStoredProcedure<SalesByMonthResult[]>('GetMonthlySalesByYear', params)).map(
+			(sale) => new SalesDocument(sale)
+		);
+
+		const updatePromises = sales.map((sale) => {
+			return createDocument<SalesByMonthResult>(sale.id, 'sales', sale.dataTableResult);
+		});
+
+		const results = await Promise.allSettled(updatePromises);
+		logPromisesResults(results);
+	} catch (error) {
+		console.error('Error:', error);
+	}
+}
+
+// startScheduler(60, 8, ProductUpdateProcessSequence);
+
+for (let index = 2015; index < 2018; index++) {
+	salesUpdateProcess(index);
+}
